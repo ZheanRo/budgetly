@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "187763192094",
+    "project_id": "budgetly-195da",
+    "storage_bucket": "budgetly-195da.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:187763192094:android:758a1723ca0ad6b749590f",
+        "android_client_info": {
+          "package_name": "com.example.budgetly"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBKLziVZl9zKejQxTSJvoQzUwj8Z7uIMMY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
