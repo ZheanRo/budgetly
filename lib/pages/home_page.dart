@@ -15,7 +15,8 @@ class HomePage extends StatefulWidget {
 class _HomePageState extends State<HomePage> {
 //text controllers
   final newExpenseNameController = TextEditingController();
-  final newExpenseAmountController = TextEditingController();
+  final newExpensePoundController = TextEditingController();
+  final newExpensePenceController = TextEditingController();
 
 // add new expense
   void addNewExpense() {
@@ -27,10 +28,32 @@ class _HomePageState extends State<HomePage> {
           mainAxisSize: MainAxisSize.min,
           children: [
             // expense name
-            TextField(controller: newExpenseNameController),
+            TextField(
+              controller: newExpenseNameController,
+              decoration: const InputDecoration(hintText: "Expense name"),
+            ),
 
-            // expense amount
-            TextField(controller: newExpenseAmountController),
+            Row(
+              children: [
+                // pounds
+                Expanded(
+                  child: TextField(
+                    controller: newExpensePoundController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(hintText: "Pounds"),
+                  ),
+                ),
+
+                // pence
+                Expanded(
+                  child: TextField(
+                    controller: newExpensePenceController,
+                    keyboardType: TextInputType.number,
+                    decoration: const InputDecoration(hintText: "Pence"),
+                  ),
+                ),
+              ],
+            )
           ],
         ),
         actions: [
@@ -48,16 +71,32 @@ class _HomePageState extends State<HomePage> {
     );
   }
 
+// delete expense
+  void deleteExpense(ExpenseItem expense) {
+    Provider.of<ExpenseData>(context, listen: false).deleteExpense(expense);
+  }
+
 // save
   void save() {
-    //create exepnse item
-    ExpenseItem newExpense = ExpenseItem(
-      name: newExpenseNameController.text,
-      amount: newExpenseAmountController.text,
-      dateTime: DateTime.now(),
-    );
-    // add the new expense
-    Provider.of<ExpenseData>(context, listen: false).addNewExpense(newExpense);
+    // only save expense if all fields are filled
+    if (newExpenseNameController.text.isNotEmpty &&
+        newExpensePoundController.text.isNotEmpty &&
+        newExpensePenceController.text.isNotEmpty) {
+      //put dollars and cents together
+      String amount =
+          '${newExpensePoundController.text}.${newExpensePenceController.text}';
+
+      //create exepnse item
+      ExpenseItem newExpense = ExpenseItem(
+        id: 'pending',
+        name: newExpenseNameController.text,
+        amount: amount,
+        dateTime: DateTime.now(),
+      );
+      // add the new expense
+      Provider.of<ExpenseData>(context, listen: false)
+          .addNewExpense(newExpense);
+    }
 
     Navigator.pop(context);
     clear();
@@ -71,8 +110,9 @@ class _HomePageState extends State<HomePage> {
 
 // clear controllers
   void clear() {
-    newExpenseAmountController.clear();
+    newExpensePoundController.clear();
     newExpenseNameController.clear();
+    newExpensePenceController.clear();
   }
 
   @override
@@ -82,11 +122,17 @@ class _HomePageState extends State<HomePage> {
           backgroundColor: Colors.grey[300],
           floatingActionButton: FloatingActionButton(
             onPressed: addNewExpense,
-            child: Icon(Icons.add),
+            backgroundColor: Colors.black,
+            child: const Icon(
+              Icons.add,
+              color: Colors.white,
+            ),
           ),
           body: ListView(children: [
             // weekly summary
             ExpenseSummary(startOfWeek: value.startOfWeekDate()),
+
+            const SizedBox(height: 20),
             // expense list
             ListView.builder(
                 shrinkWrap: true,
@@ -95,7 +141,9 @@ class _HomePageState extends State<HomePage> {
                 itemBuilder: (context, index) => ExpenseTile(
                     name: value.getAllExpenseList()[index].name,
                     amount: value.getAllExpenseList()[index].amount,
-                    dateTime: value.getAllExpenseList()[index].dateTime))
+                    dateTime: value.getAllExpenseList()[index].dateTime,
+                    deleteTapped: (p0) =>
+                        deleteExpense(value.getAllExpenseList()[index])))
           ])),
     );
   }

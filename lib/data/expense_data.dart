@@ -1,8 +1,12 @@
 import 'package:budgetly/datetime/date_time_helper.dart';
 import 'package:budgetly/models/expense_item.dart';
 import 'package:flutter/material.dart';
+import 'package:budgetly/services/firestore.dart';
 
 class ExpenseData extends ChangeNotifier {
+  // initialise Firestore
+  FirestoreService db = FirestoreService();
+
 // list of ALL expenses
   List<ExpenseItem> overallExpenseList = [];
 
@@ -12,16 +16,36 @@ class ExpenseData extends ChangeNotifier {
   }
 
 // add new expense
-  void addNewExpense(ExpenseItem newExpense) {
-    overallExpenseList.add(newExpense);
+  void addNewExpense(ExpenseItem tempExpense) async {
+    String docId = await db.addExpense(tempExpense);
 
+    ExpenseItem fullExpense = ExpenseItem(
+        id: docId,
+        name: tempExpense.name,
+        amount: tempExpense.amount,
+        dateTime: tempExpense.dateTime);
+    overallExpenseList.add(fullExpense);
     notifyListeners();
   }
 
 // delete expense
-  void deleteExpense(ExpenseItem expense) {
+  void deleteExpense(ExpenseItem expense) async {
     overallExpenseList.remove(expense);
+    notifyListeners();
+    await db.deleteExpense(expense.id);
+  }
 
+  // Fetch from Firestore on startup
+  Future<void> loadExpensesFromFirestore() async {
+    final firestoreData = await db.getExpenses();
+    overallExpenseList = firestoreData.map((item) {
+      return ExpenseItem(
+        id: item['id'],
+        name: item['name'],
+        amount: item['amount'],
+        dateTime: item['timestamp'],
+      );
+    }).toList();
     notifyListeners();
   }
 

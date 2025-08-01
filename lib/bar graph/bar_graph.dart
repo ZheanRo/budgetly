@@ -45,7 +45,47 @@ class MyBarGraph extends StatelessWidget {
           show: true,
           topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
           rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-          bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true))),
+          bottomTitles: AxisTitles(
+            sideTitles: SideTitles(
+              showTitles: true,
+              getTitlesWidget: (double value, TitleMeta meta) {
+                String text;
+                switch (value.toInt()) {
+                  case 0:
+                    text = 'M';
+                    break;
+                  case 1:
+                    text = 'T';
+                    break;
+                  case 2:
+                    text = 'W';
+                    break;
+                  case 3:
+                    text = 'T';
+                    break;
+                  case 4:
+                    text = 'F';
+                    break;
+                  case 5:
+                    text = 'S';
+                    break;
+                  case 6:
+                    text = 'S';
+                    break;
+                  default:
+                    text = '';
+                }
+                return Text(
+                  text,
+                  style: const TextStyle(
+                    color: Colors.grey,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 14,
+                  ),
+                );
+              },
+            ),
+          )),
       gridData: FlGridData(show: false),
       borderData: FlBorderData(show: false),
       barGroups: myBarData.barData

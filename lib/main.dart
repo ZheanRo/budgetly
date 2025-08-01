@@ -17,7 +17,11 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) => ExpenseData(),
+      create: (context) {
+        final expenseData = ExpenseData();
+        expenseData.loadExpensesFromFirestore(); // load at start
+        return expenseData;
+      },
       builder: (context, child) => const MaterialApp(
         debugShowCheckedModeBanner: false,
         home: HomePage(),
