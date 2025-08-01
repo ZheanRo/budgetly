@@ -1,55 +1,105 @@
-import 'package:budgetly/datetime/date_time_helper.dart';
 import 'package:budgetly/models/expense_item.dart';
+import 'package:budgetly/datetime/date_time_helper.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:budgetly/services/firestore.dart';
 
 class ExpenseData extends ChangeNotifier {
-  // initialise Firestore
-  FirestoreService db = FirestoreService();
+  final List<ExpenseItem> _overallExpenseList = [];
+  bool _hasFetched = false; // Prevent multiple fetches
 
-// list of ALL expenses
-  List<ExpenseItem> overallExpenseList = [];
-
-// get expense list
   List<ExpenseItem> getAllExpenseList() {
-    return overallExpenseList;
+    return _overallExpenseList;
   }
 
-// add new expense
-  void addNewExpense(ExpenseItem tempExpense) async {
-    String docId = await db.addExpense(tempExpense);
+  // FETCH from Firestore
+  Future<void> fetchExpenses() async {
+    if (_hasFetched) return;
+    _hasFetched = true;
 
-    ExpenseItem fullExpense = ExpenseItem(
-        id: docId,
-        name: tempExpense.name,
-        amount: tempExpense.amount,
-        dateTime: tempExpense.dateTime);
-    overallExpenseList.add(fullExpense);
-    notifyListeners();
-  }
+    // Wait briefly to ensure FirebaseAuth has time to resolve currentUser
+    await Future.delayed(const Duration(milliseconds: 100));
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
 
-// delete expense
-  void deleteExpense(ExpenseItem expense) async {
-    overallExpenseList.remove(expense);
-    notifyListeners();
-    await db.deleteExpense(expense.id);
-  }
+    final uid = user.uid;
+    final expensesRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('expenses');
 
-  // Fetch from Firestore on startup
-  Future<void> loadExpensesFromFirestore() async {
-    final firestoreData = await db.getExpenses();
-    overallExpenseList = firestoreData.map((item) {
-      return ExpenseItem(
-        id: item['id'],
-        name: item['name'],
-        amount: item['amount'],
-        dateTime: item['timestamp'],
+    final snapshot =
+        await expensesRef.orderBy('timestamp', descending: true).get();
+
+    _overallExpenseList.clear(); // Clear old data
+    for (var doc in snapshot.docs) {
+      final data = doc.data();
+      _overallExpenseList.add(
+        ExpenseItem(
+          id: doc.id,
+          name: data['name'] ?? '',
+          amount: data['amount'] ?? '0.00',
+          dateTime: (data['timestamp'] as Timestamp).toDate(),
+        ),
       );
-    }).toList();
+    }
+
     notifyListeners();
   }
 
-// get day of the week from a dateTime object
+  // RESET fetch flag (use after logout if needed)
+  void resetFetchedFlag() {
+    _hasFetched = false;
+  }
+
+  // ADD
+  Future<void> addNewExpense(ExpenseItem newExpense) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) return;
+
+    final uid = user.uid;
+    final expensesRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('expenses');
+
+    final docRef = await expensesRef.add({
+      'name': newExpense.name,
+      'amount': newExpense.amount,
+      'timestamp': newExpense.dateTime,
+    });
+
+    _overallExpenseList.add(
+      ExpenseItem(
+        id: docRef.id,
+        name: newExpense.name,
+        amount: newExpense.amount,
+        dateTime: newExpense.dateTime,
+      ),
+    );
+
+    notifyListeners();
+  }
+
+  // DELETE
+  Future<void> deleteExpense(ExpenseItem expense) async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null || expense.id == null) return;
+
+    final uid = user.uid;
+    final docRef = FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('expenses')
+        .doc(expense.id);
+
+    await docRef.delete();
+    _overallExpenseList.removeWhere((e) => e.id == expense.id);
+
+    notifyListeners();
+  }
+
+  // Day Name
   String getDayName(DateTime dateTime) {
     switch (dateTime.weekday) {
       case 1:
@@ -59,71 +109,44 @@ class ExpenseData extends ChangeNotifier {
       case 3:
         return 'Wed';
       case 4:
-        return 'Thur';
+        return 'Thu';
       case 5:
         return 'Fri';
       case 6:
         return 'Sat';
       case 7:
-        return 'Sun';
+        return 'Sun5';
       default:
         return '';
     }
   }
 
-// get the date for the start of the week (Monday)
+  // Start of Week
   DateTime startOfWeekDate() {
-    DateTime? startOfWeek;
-
-    // get todays date
-    DateTime today = DateTime.now();
+    final today = DateTime.now();
     for (int i = 0; i < 7; i++) {
       if (getDayName(today.subtract(Duration(days: i))) == 'Mon') {
-        startOfWeek = today.subtract(Duration(days: i));
+        return today.subtract(Duration(days: i));
       }
     }
-
-    return startOfWeek!;
+    return today; // fallback
   }
 
-/* 
-
-convert overall list of expenses into a daily expense summary 
-
-e.g. overallExpsenseList = 
-
-[
-[food, 2025 / 01 / 30 , $10 ],
-[hat, 2025 / 01 / 30, $15 ], 
-[
-
-
-Daily expense summary = [ 
-
- [2025/01/30: $25 ],
- [2025/01/31: $1],
-
-
-]
-
-*/
+  // Daily Expense Summary
   Map<String, double> calculateDailyExpenseSummary() {
-    Map<String, double> dailyExpenseSummary = {
-      // date (yyyymmdd) : amountTotalForDay
-    };
+    final Map<String, double> dailyExpenseSummary = {};
 
-    for (var expense in overallExpenseList) {
-      String date = convertDateTimeToString(expense.dateTime);
-      double amount = double.parse(expense.amount);
+    for (var expense in _overallExpenseList) {
+      final date = convertDateTimeToString(expense.dateTime);
+      final amount = double.tryParse(expense.amount) ?? 0.0;
 
       if (dailyExpenseSummary.containsKey(date)) {
-        double currentAmount = dailyExpenseSummary[date]!;
-        currentAmount += amount;
-        dailyExpenseSummary[date] = currentAmount;
+        dailyExpenseSummary[date] = dailyExpenseSummary[date]! + amount;
       } else {
-        dailyExpenseSummary.addAll({date: amount});
+        dailyExpenseSummary[date] = amount;
       }
     }
+
     return dailyExpenseSummary;
   }
 }

@@ -1,40 +1,36 @@
-import 'package:budgetly/models/expense_item.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import '../models/expense_item.dart';
 
 class FirestoreService {
-  // get collection of expenses from database
-  final CollectionReference expenses =
-      FirebaseFirestore.instance.collection('expenses');
+  final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  // CREATE: add a new expense
-  Future<String> addExpense(ExpenseItem expense) async {
-    DocumentReference docRef = await expenses.add({
-      'name': expense.name,
-      'amount': expense.amount,
-      'timestamp': expense.dateTime
-    });
-    return docRef.id;
+  // Get user's expense collection
+  CollectionReference get userExpenses {
+    final uid = _auth.currentUser?.uid;
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('expenses');
   }
 
-  // READ: get expenses from database
-  Future<List<Map<String, dynamic>>> getExpenses() async {
-    QuerySnapshot snapshot =
-        await expenses.orderBy('timestamp', descending: true).get();
-    return snapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
-      return {
-        'id': doc.id,
-        'name': data['name'],
-        'amount': data['amount'],
-        'timestamp': (data['timestamp'] as Timestamp).toDate(),
-      };
-    }).toList();
+  // Add new expense
+  Future<void> addExpense(ExpenseItem expense) async {
+    await userExpenses.add(expense.toMap());
   }
 
-  // Update: Update expensives given a expense id
+  // Delete expense
+  Future<void> deleteExpense(String id) async {
+    await userExpenses.doc(id).delete();
+  }
 
-  // Delete: delete spense given a expense id
-  Future<void> deleteExpense(String docId) async {
-    await expenses.doc(docId).delete();
+  // Fetch all expenses
+  Future<List<ExpenseItem>> getExpenses() async {
+    final snapshot =
+        await userExpenses.orderBy('dateTime', descending: true).get();
+    return snapshot.docs
+        .map((doc) =>
+            ExpenseItem.fromMap(doc.id, doc.data() as Map<String, dynamic>))
+        .toList();
   }
 }

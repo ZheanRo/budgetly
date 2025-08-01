@@ -39,6 +39,8 @@ dependencies:
   provider: ^6.1.5
   fl_chart: 0.71.0
   flutter_slidable: ^4.0.0
+  firebase_auth: ^4.16.0
+
 
 dev_dependencies:
   flutter_test:

@@ -1,5 +1,5 @@
+import 'package:budgetly/auth/main_page.dart';
 import 'package:budgetly/data/expense_data.dart';
-import 'package:budgetly/pages/home_page.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'firebase_options.dart';
@@ -17,14 +17,10 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ChangeNotifierProvider(
-      create: (context) {
-        final expenseData = ExpenseData();
-        expenseData.loadExpensesFromFirestore(); // load at start
-        return expenseData;
-      },
-      builder: (context, child) => const MaterialApp(
+      create: (_) => ExpenseData()..fetchExpenses(),
+      child: const MaterialApp(
         debugShowCheckedModeBanner: false,
-        home: HomePage(),
+        home: MainPage(),
       ),
     );
   }
