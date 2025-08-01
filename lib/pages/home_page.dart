@@ -2,7 +2,9 @@ import 'package:budgetly/components/expense_summary.dart';
 import 'package:budgetly/components/expense_tile.dart';
 import 'package:budgetly/data/expense_data.dart';
 import 'package:budgetly/models/expense_item.dart';
+import 'package:budgetly/auth/main_page.dart';
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
 
 class HomePage extends StatefulWidget {
@@ -20,7 +22,6 @@ class _HomePageState extends State<HomePage> {
   @override
   void initState() {
     super.initState();
-    // Ensure context is available before calling provider
     Future.delayed(Duration.zero, () {
       Provider.of<ExpenseData>(context, listen: false).fetchExpenses();
     });
@@ -30,7 +31,7 @@ class _HomePageState extends State<HomePage> {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Add new expense'),
+        title: const Text('Add new expense'),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -55,19 +56,15 @@ class _HomePageState extends State<HomePage> {
                   ),
                 ),
               ],
-            )
+            ),
           ],
         ),
         actions: [
-          MaterialButton(onPressed: save, child: Text('Save')),
-          MaterialButton(onPressed: cancel, child: Text('Cancel')),
+          TextButton(onPressed: save, child: const Text('Save')),
+          TextButton(onPressed: cancel, child: const Text('Cancel')),
         ],
       ),
     );
-  }
-
-  void deleteExpense(ExpenseItem expense) {
-    Provider.of<ExpenseData>(context, listen: false).deleteExpense(expense);
   }
 
   void save() {
@@ -103,11 +100,43 @@ class _HomePageState extends State<HomePage> {
     newExpensePenceController.clear();
   }
 
+  Future<void> _logout() async {
+    await FirebaseAuth.instance.signOut();
+    Provider.of<ExpenseData>(context, listen: false).resetFetchedFlag();
+
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MainPage()),
+    );
+  }
+
+  void deleteExpense(ExpenseItem expense) {
+    Provider.of<ExpenseData>(context, listen: false).deleteExpense(expense);
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<ExpenseData>(
       builder: (context, value, child) => Scaffold(
         backgroundColor: Colors.grey[300],
+        appBar: AppBar(
+          title: const Text(
+            'Budgetly',
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 24,
+            ),
+          ),
+          centerTitle: true,
+          backgroundColor: Colors.deepPurple,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.logout),
+              tooltip: 'Logout',
+              onPressed: _logout,
+            ),
+          ],
+        ),
         floatingActionButton: FloatingActionButton(
           onPressed: addNewExpense,
           backgroundColor: Colors.black,

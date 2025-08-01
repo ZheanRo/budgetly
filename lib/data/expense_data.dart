@@ -12,13 +12,12 @@ class ExpenseData extends ChangeNotifier {
     return _overallExpenseList;
   }
 
-  // FETCH from Firestore
+  // FETCH expenses from Firestore (only once per session)
   Future<void> fetchExpenses() async {
     if (_hasFetched) return;
     _hasFetched = true;
 
-    // Wait briefly to ensure FirebaseAuth has time to resolve currentUser
-    await Future.delayed(const Duration(milliseconds: 100));
+    // Ensure user is authenticated
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
 
@@ -31,7 +30,7 @@ class ExpenseData extends ChangeNotifier {
     final snapshot =
         await expensesRef.orderBy('timestamp', descending: true).get();
 
-    _overallExpenseList.clear(); // Clear old data
+    _overallExpenseList.clear(); // Clear before fetching new data
     for (var doc in snapshot.docs) {
       final data = doc.data();
       _overallExpenseList.add(
@@ -47,12 +46,12 @@ class ExpenseData extends ChangeNotifier {
     notifyListeners();
   }
 
-  // RESET fetch flag (use after logout if needed)
+  // RESET fetch flag (e.g., after logout)
   void resetFetchedFlag() {
     _hasFetched = false;
   }
 
-  // ADD
+  // ADD a new expense to Firestore and local list
   Future<void> addNewExpense(ExpenseItem newExpense) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null) return;
@@ -81,7 +80,7 @@ class ExpenseData extends ChangeNotifier {
     notifyListeners();
   }
 
-  // DELETE
+  // DELETE an expense
   Future<void> deleteExpense(ExpenseItem expense) async {
     final user = FirebaseAuth.instance.currentUser;
     if (user == null || expense.id == null) return;
@@ -99,7 +98,7 @@ class ExpenseData extends ChangeNotifier {
     notifyListeners();
   }
 
-  // Day Name
+  // Day abbreviation from DateTime
   String getDayName(DateTime dateTime) {
     switch (dateTime.weekday) {
       case 1:
@@ -115,13 +114,13 @@ class ExpenseData extends ChangeNotifier {
       case 6:
         return 'Sat';
       case 7:
-        return 'Sun5';
+        return 'Sun';
       default:
         return '';
     }
   }
 
-  // Start of Week
+  // Calculate the start of the current week (Monday)
   DateTime startOfWeekDate() {
     final today = DateTime.now();
     for (int i = 0; i < 7; i++) {
@@ -132,7 +131,7 @@ class ExpenseData extends ChangeNotifier {
     return today; // fallback
   }
 
-  // Daily Expense Summary
+  // Daily expense totals for bar chart
   Map<String, double> calculateDailyExpenseSummary() {
     final Map<String, double> dailyExpenseSummary = {};
 

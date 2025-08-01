@@ -47,12 +47,14 @@ class _LoginPageState extends State<LoginPage> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.lock, size: 100),
                 SizedBox(height: 24),
-                Text("Welcome back!",
+                Text("Welcome back to",
                     style:
                         TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                SizedBox(height: 24),
+
+                Text("Budgetly",
+                    style:
+                        TextStyle(fontSize: 60, fontWeight: FontWeight.bold)),
 
                 // Email field
                 TextField(
